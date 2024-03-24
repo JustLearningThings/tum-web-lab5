@@ -1,4 +1,6 @@
 import socket
+from bs4 import BeautifulSoup
+from urllib.parse import unquote
 
 from cache import Cache
 from argument_parser import parse_arguments
@@ -6,14 +8,13 @@ from page_parser import parse_page
 
 data = b''
 def empty_buffer():
+    global data
     data = b''
 
 def parse_url(url):
-    # Remove the scheme (http://, https://) if present
     if '://' in url:
         url = url.split('://')[1]
 
-    # Split the remaining URL into hostname and path
     parts = url.split('/', 1)
     hostname = parts[0]
     path = '/' + parts[1] if len(parts) > 1 else '/'
@@ -56,22 +57,49 @@ def request(url: str):
     finally:
         s.close()
 
+def search_term(word):
+    print(f'Searching Google for \'{word}\'...')
+    request(f'www.google.com/search?q={word}')
+
+    soup = BeautifulSoup(data, 'html.parser')        
+    headers = soup.find_all('h3')
+
+    for i, h in enumerate(headers[:10]):
+        a = h.find_parent('a')
+        print(f'{i + 1}. {h.text}')
+
+        if a:
+            link = a.get('href').split('q=')[-1]
+            link = unquote(link)
+            link = link.split('&sa=')[0]
+            print(link)
+        else:
+            print('- No link -')
+        
+        print()
 
 
 def main():
+    cache = Cache()    
     url = parse_arguments().url
     search = parse_arguments().search
     
     if url:
-        print(f'Searching {url}...')
-        request(url)
-        response = parse_page(data)
+        if cache.has(url):
+            response = cache.get(url)
+            print(f'Getting response for {url} from cache.')
+        else:
+            request(url)
+            response = parse_page(data, cache, url)
 
-        print(response)
+        print(f'{"=" * 50}\nResponse from https://{url}\n{"=" * 50}\n{response}\n{"=" * 50}\n')
 
     if search:
-        print(search)
-
+        for word in search:
+            delimiter = "=" * 50
+            print(f'{delimiter}\nSearch results for {word}\n{delimiter}')
+            search_term(word)
+            print(delimiter)        
 
 
 main()

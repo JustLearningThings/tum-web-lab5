@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 
-def parse_page(data) -> str:
+def parse_page(data, cache=None, url='') -> str:
     if data in [b'', None, '', 0, '0']:
         return 'No content.'
     
@@ -20,5 +20,9 @@ def parse_page(data) -> str:
 
     for style in soup.find_all('style'):
         style.extract()
+
+    if cache and not cache.has(url):
+        cache.add(url, body.text)
+        print(f'Response from {url} cached.\n')
 
     return body.text
