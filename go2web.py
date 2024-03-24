@@ -1,17 +1,12 @@
-import argparse
 import socket
-from bs4 import BeautifulSoup
+
+from cache import Cache
+from argument_parser import parse_arguments
+from page_parser import parse_page
 
 data = b''
 def empty_buffer():
     data = b''
-
-def parse_arguments():
-    parser = argparse.ArgumentParser(description='go2web')
-    parser.add_argument('--url', '-u', type=str, help='website URL')
-    parser.add_argument('--search', '-s', type=list, help='search the term followed by the flag')
-
-    args = parser.parse_args()
 
 def parse_url(url):
     # Remove the scheme (http://, https://) if present
@@ -51,7 +46,7 @@ def request(url: str):
 
         return data.decode()
     except socket.timeout:
-            print("Socket timed out.")
+            print("Done.\n")
 
             return None
     except Exception as e:
@@ -63,18 +58,20 @@ def request(url: str):
 
 
 
+def main():
+    url = parse_arguments().url
+    search = parse_arguments().search
+    
+    if url:
+        print(f'Searching {url}...')
+        request(url)
+        response = parse_page(data)
 
-request('www.google.com')
-html_start = data.find(b"\r\n\r\n") + 4
-html = data[html_start:]
+        print(response)
 
-soup = BeautifulSoup(html, 'html.parser')
-for s in soup.select('script'):
-    s.extract()
-body = soup.find('body')
-for e in body.find_all(True):
-    if 'style' in e.attrs:
-        del e['style']
-for style in soup.find_all('style'):
-    style.extract()
-print(body.text)
+    if search:
+        print(search)
+
+
+
+main()
